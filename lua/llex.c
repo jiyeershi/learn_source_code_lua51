@@ -60,7 +60,7 @@ static void save (LexState *ls, int c) {
   b->buffer[b->n++] = cast(char, c);
 }
 
-
+/*记录luaX_tokens(关键字表)中字符串, 字符串都会通过hash存于G(L)中stringtable*/
 void luaX_init (lua_State *L) {
   int i;
   for (i=0; i<NUM_RESERVED; i++) {

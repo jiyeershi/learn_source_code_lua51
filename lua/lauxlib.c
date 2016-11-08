@@ -108,7 +108,7 @@ LUALIB_API int luaL_checkoption (lua_State *L, int narg, const char *def,
                        lua_pushfstring(L, "invalid option " LUA_QS, name));
 }
 
-
+/*栈顶放新建的元表*/
 LUALIB_API int luaL_newmetatable (lua_State *L, const char *tname) {
   lua_getfield(L, LUA_REGISTRYINDEX, tname);  /* get registry.name */
   if (!lua_isnil(L, -1))  /* name already in use? */
@@ -238,18 +238,23 @@ static int libsize (const luaL_Reg *l) {
   return size;
 }
 
-
+/*
+1.第一次调用新建table, 注册到G(L)->l_registry[_LOADED]中
+2.新建table,注册到_LOADED 以及全局的注册表中，即 G(L)->l_registry [__LOADED][libname]，G(L)->l_registry [libname] ，
+3.将l中的所有c函数在lua生成的闭包函数 保存到新建的table中
+4.最后函数调用完成栈顶应该会保留这个新建的table，即__LOADED[libname]
+*/
 LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
                               const luaL_Reg *l, int nup) {
   if (libname) {
     int size = libsize(l);
     /* check whether lib already exists */
-    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);
+    luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 1);/*在全局状态中的l_registry表即G(L)->l_registry中找_LOADED域的表，没有会创建一个放栈顶*/
     lua_getfield(L, -1, libname);  /* get _LOADED[libname] */
     if (!lua_istable(L, -1)) {  /* not found? */
       lua_pop(L, 1);  /* remove previous result */
       /* try global variable (and create one if it does not exist) */
-      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, size) != NULL)
+      if (luaL_findtable(L, LUA_GLOBALSINDEX, libname, size) != NULL)/*没找到则也会新建table并注册到G(L)->l_registry*/
         luaL_error(L, "name conflict for module " LUA_QS, libname);
       lua_pushvalue(L, -1);
       lua_setfield(L, -3, libname);  /* _LOADED[libname] = new table */
@@ -257,12 +262,13 @@ LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
     lua_remove(L, -2);  /* remove _LOADED table */
     lua_insert(L, -(nup+1));  /* move library table to below upvalues */
   }
+  /*此时栈顶为新建的table*/
   for (; l->name; l++) {
     int i;
     for (i=0; i<nup; i++)  /* copy upvalues to the top */
       lua_pushvalue(L, -nup);
-    lua_pushcclosure(L, l->func, nup);
-    lua_setfield(L, -(nup+2), l->name);
+    lua_pushcclosure(L, l->func, nup);/*创建函数闭包到栈顶*/
+    lua_setfield(L, -(nup+2), l->name);/*相当于__LOADED[libname] [l->name] = 上面的闭包*/
   }
   lua_pop(L, nup);  /* remove upvalues */
 }
@@ -353,7 +359,14 @@ LUALIB_API const char *luaL_gsub (lua_State *L, const char *s, const char *p,
   return lua_tostring(L, -1);
 }
 
-
+/*
+功能：在idx指定的table中找fname域的table,找到就返回，没找到就注册table[fname] = newtable
+详细解释：
+在idx指定的table中找fname域的table,
+1.如果找到但发现不是table则返回fname,并还原栈到进入函数前的状态
+2.如果没找到则创建新的table给idx指定table的fname域,返回NULL,并在栈上保留新的table
+3.如果找到，则将该表放于栈顶
+*/
 LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
                                        const char *fname, int szhint) {
   const char *e;
@@ -362,7 +375,7 @@ LUALIB_API const char *luaL_findtable (lua_State *L, int idx,
     e = strchr(fname, '.');
     if (e == NULL) e = fname + strlen(fname);
     lua_pushlstring(L, fname, e - fname);
-    lua_rawget(L, -2);
+    lua_rawget(L, -2);/*取-2位置table以-1位置为key的结果，弹出-1位置的key,压入结果值到-1位置*/
     if (lua_isnil(L, -1)) {  /* no such field? */
       lua_pop(L, 1);  /* remove this nil */
       lua_createtable(L, 0, (*e == '.' ? 1 : szhint)); /* new table for field */

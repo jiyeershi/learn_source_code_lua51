@@ -38,7 +38,7 @@ typedef struct LG {
 } LG;
   
 
-
+/*初始化虚拟栈*/
 static void stack_init (lua_State *L1, lua_State *L) {
   /* initialize CallInfo array */
   L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
@@ -71,18 +71,18 @@ static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
   UNUSED(ud);
   stack_init(L, L);  /* init stack */
-  sethvalue(L, gt(L), luaH_new(L, 0, 2));  /* table of globals */
-  sethvalue(L, registry(L), luaH_new(L, 0, 2));  /* registry */
+  sethvalue(L, gt(L), luaH_new(L, 0, 2));  /* table of globals */ /*设置新的table给L的全局table L->l_gt*/
+  sethvalue(L, registry(L), luaH_new(L, 0, 2));  /* registry */ /*设置新的table给 &G(L)->l_registry*/
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
-  luaT_init(L);
-  luaX_init(L);
+  luaT_init(L);/*初始化table的一些方法名字*/
+  luaX_init(L);/*初始化lua 的一些关键字，存与G(L)中的stringtable*/
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
   g->GCthreshold = 4*g->totalbytes;
 }
 
-
+/*预初始化一些L的成员*/
 static void preinit_state (lua_State *L, global_State *g) {
-  G(L) = g;
+  G(L) = g; //将global_State 与 lua_State L关联
   L->stack = NULL;
   L->stacksize = 0;
   L->errorJmp = NULL;

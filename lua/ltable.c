@@ -259,7 +259,7 @@ static int numusehash (const Table *t, int *nums, int *pnasize) {
   return totaluse;
 }
 
-
+/*给table分配sizeof(Tvalue) * size大小数组空间*/
 static void setarrayvector (lua_State *L, Table *t, int size) {
   int i;
   luaM_reallocvector(L, t->array, t->sizearray, size, TValue);
@@ -268,7 +268,7 @@ static void setarrayvector (lua_State *L, Table *t, int size) {
   t->sizearray = size;
 }
 
-
+/*给table分配sizeof(Node) * size大小node空间*/
 static void setnodevector (lua_State *L, Table *t, int size) {
   int lsize;
   if (size == 0) {  /* no elements to hash part? */
@@ -354,7 +354,7 @@ static void rehash (lua_State *L, Table *t, const TValue *ek) {
 ** }=============================================================
 */
 
-
+/*new一个table, 分配narray * sizeof(Tvalue)大小的数组部分, 以及nhash * sizeof(Node)大小的hash部分*/
 Table *luaH_new (lua_State *L, int narray, int nhash) {
   Table *t = luaM_new(L, Table);
   luaC_link(L, obj2gco(t), LUA_TTABLE);
@@ -452,6 +452,7 @@ const TValue *luaH_getnum (Table *t, int key) {
 /*
 ** search function for strings
 */
+/*根据key的hash寻找node TODO:可以继续追踪这个hash算法查找的过程*/
 const TValue *luaH_getstr (Table *t, TString *key) {
   Node *n = hashstr(t, key);
   do {  /* check whether `key' is somewhere in the chain */
@@ -490,7 +491,7 @@ const TValue *luaH_get (Table *t, const TValue *key) {
   }
 }
 
-
+/*如果key原来存在，返回key所对应的value,否则返回。。*/
 TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
   const TValue *p = luaH_get(t, key);
   t->flags = 0;
@@ -498,7 +499,7 @@ TValue *luaH_set (lua_State *L, Table *t, const TValue *key) {
     return cast(TValue *, p);
   else {
     if (ttisnil(key)) luaG_runerror(L, "table index is nil");
-    else if (ttisnumber(key) && luai_numisnan(nvalue(key)))
+    else if (ttisnumber(key) && luai_numisnan(nvalue(key))) /*luai_numisnan 这是个什么 TODO*/
       luaG_runerror(L, "table index is NaN");
     return newkey(L, t, key);
   }

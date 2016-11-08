@@ -29,7 +29,7 @@ Closure *luaF_newCclosure (lua_State *L, int nelems, Table *e) {
   return c;
 }
 
-
+/*创建一个闭包，环境是table e, 有nelems 个upval*/
 Closure *luaF_newLclosure (lua_State *L, int nelems, Table *e) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
   luaC_link(L, obj2gco(c), LUA_TFUNCTION);

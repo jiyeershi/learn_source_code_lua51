@@ -623,14 +623,18 @@ static const luaL_Reg ll_funcs[] = {
 static const lua_CFunction loaders[] =
   {loader_preload, loader_Lua, loader_C, loader_Croot, NULL};
 
-
+/*
+1.没太搞明白
+2.目前写在下面，感觉最后加了两个表，在栈顶是G(L)->l_registry [__LOADED]["package"]， 然后下面跟着G(L)->l_registry ["_LOADLIB"]
+*/
 LUALIB_API int luaopen_package (lua_State *L) {
   int i;
   /* create new type _LOADLIB */
-  luaL_newmetatable(L, "_LOADLIB");
-  lua_pushcfunction(L, gctm);
-  lua_setfield(L, -2, "__gc");
+  luaL_newmetatable(L, "_LOADLIB");/*新建表放栈顶 并注册到 &G(L)->l_registry ["_LOADLIB"]*/
+  lua_pushcfunction(L, gctm);/*创建gctm的闭包到栈顶*/
+  lua_setfield(L, -2, "__gc");/*注册&G(L)->l_registry ["_LOADLIB"]["_gc"]*/
   /* create `package' table */
+  /*栈顶新建table,注册到G(L)->l_registry [__LOADED]["package"]以及G(L)->l_registry ["package"]，并将pk_funcs中的方法保存到该table*/
   luaL_register(L, LUA_LOADLIBNAME, pk_funcs);
 #if defined(LUA_COMPAT_LOADLIB) 
   lua_getfield(L, -1, "loadlib");
@@ -639,24 +643,27 @@ LUALIB_API int luaopen_package (lua_State *L) {
   lua_pushvalue(L, -1);
   lua_replace(L, LUA_ENVIRONINDEX);
   /* create `loaders' table */
-  lua_createtable(L, 0, sizeof(loaders)/sizeof(loaders[0]) - 1);
+  lua_createtable(L, 0, sizeof(loaders)/sizeof(loaders[0]) - 1);/*创建loaders表，并放入下面的函数*/
   /* fill it with pre-defined loaders */
   for (i=0; loaders[i] != NULL; i++) {
     lua_pushcfunction(L, loaders[i]);
     lua_rawseti(L, -2, i+1);
   }
+  /*应该是把loaders表放进["package"]["loaders"]域，*/
   lua_setfield(L, -2, "loaders");  /* put it in field `loaders' */
+  /*设置["package"]["path"]*/
   setpath(L, "path", LUA_PATH, LUA_PATH_DEFAULT);  /* set field `path' */
   setpath(L, "cpath", LUA_CPATH, LUA_CPATH_DEFAULT); /* set field `cpath' */
   /* store config information */
   lua_pushliteral(L, LUA_DIRSEP "\n" LUA_PATHSEP "\n" LUA_PATH_MARK "\n"
                      LUA_EXECDIR "\n" LUA_IGMARK);
+  /*设置["package"]["config"]*/
   lua_setfield(L, -2, "config");
   /* set field `loaded' */
   luaL_findtable(L, LUA_REGISTRYINDEX, "_LOADED", 2);
-  lua_setfield(L, -2, "loaded");
+  lua_setfield(L, -2, "loaded");/*设置["package"]["loaded"] = G(L)->l_registry [__LOADED] 这个栈有点混乱 可能没搞明白???*/
   /* set field `preload' */
-  lua_newtable(L);
+  lua_newtable(L); /*设置["package"]["preload"]为一个新table*/
   lua_setfield(L, -2, "preload");
   lua_pushvalue(L, LUA_GLOBALSINDEX);
   luaL_register(L, NULL, ll_funcs);  /* open lib into global table */

@@ -622,17 +622,26 @@ static void auxopen (lua_State *L, const char *name,
   lua_setfield(L, -2, name);
 }
 
-
+/*
+1.将全局表L->l_gt， 以及key 做成node 放入全局表L->l_gt的hash部分
+2.注册新的table到G(L)->l_registry [_G]和G(L)->l_registry [__LOADED][_G]域，当然G(L)->l_registry [__LOADED]也是在这个函数间接注册的
+，在这个新的table中注册base_funcs中的函数，包括ipairs, pairs
+3.设置全局标L->l_gt的["newproxy"]为由luaB_newproxy生成的闭包，该闭包有一个元表为自身且元表的__mode域 等于 "kv"的upValue
+4.该函数最后保留2中创建的table到栈顶
+*/
 static void base_open (lua_State *L) {
   /* set global _G */
   lua_pushvalue(L, LUA_GLOBALSINDEX);
-  lua_setglobal(L, "_G");
+  /* 将全局表L->l_gt， 以及key 做成node 放入全局表L->l_gt的hash部分*/
+  lua_setglobal(L, "_G");/*设置(&L->l_gt->h["_G"] = &L->l_gt->h) 括号中的形式有待商榷？详细需要看lvm.c中设置*/
   /* open lib into global table */
+  /*区别上面的L->l_gt中[_G]域，此时应该得到一个新table,并注册到全局state的注册表中G(L)->l_registry [_G]，并且
+  该新table也被G(L)->l_registry [__LOADED][_G]索引，此时栈顶应该为这个新的table*/
   luaL_register(L, "_G", base_funcs);
   lua_pushliteral(L, LUA_VERSION);
   lua_setglobal(L, "_VERSION");  /* set global _VERSION */
   /* `ipairs' and `pairs' need auxliliary functions as upvalues */
-  auxopen(L, "ipairs", luaB_ipairs, ipairsaux);
+  auxopen(L, "ipairs", luaB_ipairs, ipairsaux); /*(L)->l_registry [__LOADED][_G]["ipairs"] = (由luaB_ipairs生成的闭包)*/
   auxopen(L, "pairs", luaB_pairs, luaB_next);
   /* `newproxy' needs a weaktable as upvalue */
   lua_createtable(L, 0, 1);  /* new table `w' */
@@ -646,7 +655,9 @@ static void base_open (lua_State *L) {
 
 
 LUALIB_API int luaopen_base (lua_State *L) {
-  base_open(L);
+  base_open(L);/*栈顶为G(L)->l_registry [_G] 所指的table*/
+  /*注册协程表G(L)->l_registry [coroutine]，G(L)->l_registry [__LOADED][coroutine]
+  栈顶为协程表*/
   luaL_register(L, LUA_COLIBNAME, co_funcs);
   return 2;
 }

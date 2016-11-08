@@ -18,7 +18,7 @@
 #include "lstring.h"
 
 
-
+/*开辟一块 newsize * sizeof(GCObject) 大小的空间给G(L)的stringtable*/
 void luaS_resize (lua_State *L, int newsize) {
   GCObject **newhash;
   stringtable *tb;
@@ -71,7 +71,7 @@ static TString *newlstr (lua_State *L, const char *str, size_t l,
   return ts;
 }
 
-
+/*现在G(L)->strt中通过hash算法找，找不到新建一个str*/
 TString *luaS_newlstr (lua_State *L, const char *str, size_t l) {
   GCObject *o;
   unsigned int h = cast(unsigned int, l);  /* seed */

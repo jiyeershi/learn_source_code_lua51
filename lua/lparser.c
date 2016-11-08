@@ -388,8 +388,10 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   open_func(&lexstate, &funcstate);
   funcstate.f->is_vararg = VARARG_ISVARARG;  /* main func. is always vararg */
   luaX_next(&lexstate);  /* read first token */
+  /*由每个当前的token向后chunk，chunk中调用statement进行词法分析，有时候会报错except啥啥的，就是这个函数搞的，
+  每找到下一个token 就相当于确定了一个block，那么会调用block函数，在block函数中继续chunk,如此递归到最后*/
   chunk(&lexstate);
-  check(&lexstate, TK_EOS);
+  check(&lexstate, TK_EOS);//检测结尾符
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nups == 0);

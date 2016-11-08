@@ -134,7 +134,7 @@ typedef struct lua_TValue {
   { TValue *i_o=(obj); \
     i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TUSERDATA; \
     checkliveness(G(L),i_o); }
-
+/*设置为一个LUA_TTHREAD类型*/
 #define setthvalue(L,obj,x) \
   { TValue *i_o=(obj); \
     i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TTHREAD; \
@@ -328,7 +328,7 @@ typedef union TKey {
   TValue tvk;
 } TKey;
 
-
+/*键值对*/
 typedef struct Node {
   TValue i_val;
   TKey i_key;

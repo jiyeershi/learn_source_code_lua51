@@ -199,7 +199,7 @@ LUA_API void lua_insert (lua_State *L, int idx) {
   lua_unlock(L);
 }
 
-
+/*暂时没看明白*/
 LUA_API void lua_replace (lua_State *L, int idx) {
   StkId o;
   lua_lock(L);
@@ -662,7 +662,7 @@ LUA_API void lua_setfield (lua_State *L, int idx, const char *k) {
   t = index2adr(L, idx);
   api_checkvalidindex(L, t);
   setsvalue(L, &key, luaS_new(L, k));
-  luaV_settable(L, t, &key, L->top - 1);
+  luaV_settable(L, t, &key, L->top - 1);/*将L->top - 1位置的元素，和key绑定成node, 给table的hash部分，L->top - 1是栈顶？*/
   L->top--;  /* pop value */
   lua_unlock(L);
 }
